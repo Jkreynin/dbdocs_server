@@ -24,7 +24,8 @@ BEGIN
       CREATE TYPE column_data AS (
   		  name text,
   		  "desc" text,
-  		  type text
+            type text,
+            ispk boolean
       );
 
     END IF;
@@ -32,15 +33,30 @@ END
 $$;
 `
 
-const parseTables = `insert into dbdocs.tables_docs (name, schema, "desc", add_desc, tags, columns)
-select table_name, table_schema, '', '', '{}', jsonb_agg(row_to_json(cast(row(c.column_name, '', c.data_type) as column_data))) json_columns
-from (select table_name, table_schema, column_name, data_type from information_schema.columns) c
-where table_schema in (${config.schemas.map(item=>`'${item}'`).toString()})
-group by table_name, table_schema
+const parseTables = `INSERT INTO dbdocs.tables_docs (name, schema, "desc", add_desc, tags, columns)
+SELECT
+    table_name, table_schema, '', '', '{}'::text[],
+    jsonb_agg (row_to_json(cast(row (c.column_name, '', c.data_type, c.ispk) as column_data))) json_columns
+FROM (
+    SELECT
+        distinct col.table_name,
+        col.table_schema,
+        col.column_name,
+        col.data_type, (case when kcol.constraint_name != '' then true
+            						else false 
+												end) as ispk
+FROM information_schema.columns col
+    LEFT JOIN information_schema.key_column_usage kcol 
+		ON kcol.table_name = col.table_name
+    AND kcol.table_schema = col.table_schema
+WHERE  col.table_schema in (${config.schemas.map(item=>`'${item}'`).toString()})) c
+WHERE  table_schema in (${config.schemas.map(item=>`'${item}'`).toString()})
+GROUP BY table_name, table_schema
+
 ON CONFLICT ON CONSTRAINT tables_docs_pkey DO UPDATE SET columns= (SELECT json_agg(newColumns) FROM (
-    SELECT coalesce(new.name, old.name) AS name, coalesce(old.desc, new.desc) AS desc, coalesce(new.type, old.type) AS type
-    FROM jsonb_to_recordset(dbdocs.tables_docs.columns) AS old(name text, "desc" text, type text)
-    FULL JOIN jsonb_to_recordset(EXCLUDED.columns) AS new(name text, "desc" text,type text)
+    SELECT coalesce(new.name, old.name) AS name, coalesce(old.desc, new.desc) AS desc, coalesce(new.type, old.type) AS type, coalesce(new.ispk, old.ispk) AS ispk
+    FROM jsonb_to_recordset(dbdocs.tables_docs.columns) AS old(name text, "desc" text, type text, ispk boolean)
+    FULL JOIN jsonb_to_recordset(EXCLUDED.columns) AS new(name text, "desc" text, type text, ispk boolean)
     ON old.name = new.name
 ) newColumns);`
 
