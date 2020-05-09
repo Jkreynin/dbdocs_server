@@ -33,9 +33,7 @@ ALTER TABLE dbdocs.configuration
     OWNER to postgres;
 
 INSERT INTO dbdocs.configuration (property, property_data) VALUES
-('credentials', '{"pass": "dontfish", "name": "maagar"}'),
-('tags', '{"values": ["Read", "Write", "TBManager"]}'),
-('schemas', '{"values": ["emet", "tbcommon"]}')
+('credentials', '{"pass": "dontfish", "name": "maagar"}')
 ON CONFLICT DO NOTHING;
     
 DO $$

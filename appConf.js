@@ -1,17 +1,13 @@
-// const host = 'kandula.db.elephantsql.com'
-// const user = 'cheyjwak'
-// const database = 'cheyjwak'
-// const password = 'BbOuf4mbwj9HyRRkvlwtcCyEV9isepEN'
-// const port = 5432
 
-const host = 'localhost'
-const user = 'postgres'
-const database = 'postgres'
-const password = 'postgres'
-const port = 5432
+const host = process.env.HOST
+const user = process.env.USER
+const database = process.env.DB
+const password = process.env.PASS
+const port = process.env.PORT
 
 const schemas = ['emet', 'tbcommon']
-const tags = ['Read','Write','TBManager']
+const tags = ['Read', 'Write', 'TBManager']
+
 module.exports = {
     host,
     user,
