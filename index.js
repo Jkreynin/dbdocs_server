@@ -1,8 +1,13 @@
 const express = require('express')
 const bodyParser = require('body-parser')
 const dataAccess = require('./dataAccess')
+const tokenHandler = require('./tokenHandler')
+const auth = require('./auth')
+const cors = require('cors');
+
 const app = express()
 const port = 3000
+
 app.use(express.static('public'));
 app.use(bodyParser.json())
 app.use(
@@ -10,18 +15,34 @@ app.use(
         extended: true,
     })
 )
-app.use(function (req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    res.header('Access-Control-Allow-Methods', 'PUT, POST, GET, DELETE, OPTIONS');
-    next();
+
+app.use(cors());
+
+app.post('/login', async (request, response) => {
+    let userData = {
+        name: request.body.name,
+        pass: request.body.pass
+    }
+
+    try {
+        if (await dataAccess.isUserValid(userData)) {
+            let token = tokenHandler.create(userData)
+            return response.json({ token: token })
+        } else {
+            return response.status(401).send('Could not login')
+        }
+    } catch (error) {
+        return response.status(500).send('An unexpected error has occured')
+    }
+
 });
 
-app.get('/tables', dataAccess.getTables)
-app.get('/tables/:schema/:name', dataAccess.getTableByNameAndSchema)
-app.put('/table', dataAccess.updateTable)
-app.get('/refresh', dataAccess.refresh)
-app.get('/tags', dataAccess.getTags)
+app.use("/api*", auth);
+app.get('/api/tables', dataAccess.getTables)
+app.get('/api/tables/:schema/:name', dataAccess.getTableByNameAndSchema)
+app.put('/api/table', dataAccess.updateTable)
+app.get('/api/refresh', dataAccess.refresh)
+app.get('/api/tags', dataAccess.getTags)
 
 dataAccess.setup()
     .then(() => {

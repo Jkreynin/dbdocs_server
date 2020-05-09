@@ -1,6 +1,8 @@
 const config = require('./appConf')
+let schemas = config.schemas.map(item=>`'${item}'`).toString();
 const setupScript = `
 CREATE SCHEMA IF NOT EXISTS dbdocs AUTHORIZATION ${config.user};
+
 CREATE TABLE IF NOT EXISTS dbdocs.tables_docs
 (
     name text COLLATE pg_catalog."default" NOT NULL,
@@ -10,7 +12,7 @@ CREATE TABLE IF NOT EXISTS dbdocs.tables_docs
     tags text[] COLLATE pg_catalog."default",
     columns jsonb,
     is_deleted boolean NOT NULL DEFAULT false,
-    CONSTRAINT tables_docs_pkey PRIMARY KEY (name, schema)
+    CONSTRAINT tables_docs_pkey PRIMARY KEY (name,schema)
 )
 
 TABLESPACE pg_default;
@@ -18,6 +20,24 @@ TABLESPACE pg_default;
 ALTER TABLE dbdocs.tables_docs
     OWNER to ${config.user};
 
+CREATE TABLE IF NOT EXISTS dbdocs.configuration
+(
+    property text COLLATE pg_catalog."default" NOT NULL,
+    property_data jsonb,
+    CONSTRAINT configuration_pkey PRIMARY KEY (property)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE dbdocs.configuration
+    OWNER to postgres;
+
+INSERT INTO dbdocs.configuration (property, property_data) VALUES
+('credentials', '{"pass": "dontfish", "name": "maagar"}'),
+('tags', '{"values": ["Read", "Write", "TBManager"]}'),
+('schemas', '{"values": ["emet", "tbcommon"]}')
+ON CONFLICT DO NOTHING;
+    
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'column_data') THEN
@@ -47,10 +67,11 @@ FROM (
 												end) as ispk
 FROM information_schema.columns col
     LEFT JOIN information_schema.key_column_usage kcol 
-		ON kcol.table_name = col.table_name
+	ON kcol.table_name = col.table_name
     AND kcol.table_schema = col.table_schema
-WHERE  col.table_schema in (${config.schemas.map(item=>`'${item}'`).toString()})) c
-WHERE  table_schema in (${config.schemas.map(item=>`'${item}'`).toString()})
+    AND col.column_name = kcol.column_name
+WHERE  col.table_schema in (${schemas})) c
+WHERE  table_schema in (${schemas})
 GROUP BY table_name, table_schema
 
 ON CONFLICT ON CONSTRAINT tables_docs_pkey DO UPDATE SET columns= (SELECT json_agg(newColumns) FROM (

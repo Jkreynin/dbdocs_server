@@ -80,6 +80,15 @@ const updateTable = (request, response) => {
   )
 }
 
+const isUserValid = async (userData) => {
+  let results = await pool.query(`SELECT property_data
+              FROM dbdocs.configuration
+              WHERE property = 'credentials'`)
+
+  let credentials = results.rows[0].property_data;
+  return (credentials.name == userData.name && credentials.pass == userData.pass)
+}
+
 const getTags = (request, response) => {
   response.status(200).json(config.tags)
 }
@@ -90,5 +99,6 @@ module.exports = {
   getTableByNameAndSchema,
   updateTable,
   getTags,
-  refresh
+  refresh,
+  isUserValid
 }
