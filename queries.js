@@ -1,5 +1,5 @@
 const config = require('./appConf')
-let schemas = config.schemas.map(item=>`'${item}'`).toString();
+let schemas = config.schemas.map(item => `'${item}'`).toString();
 const setupScript = `
 CREATE SCHEMA IF NOT EXISTS dbdocs AUTHORIZATION ${config.user};
 
@@ -43,7 +43,7 @@ BEGIN
   		  name text,
   		  "desc" text,
             type text,
-            ispk boolean
+            constraint_types text[]
       );
 
     END IF;
@@ -54,32 +54,38 @@ $$;
 const parseTables = `INSERT INTO dbdocs.tables_docs (name, schema, "desc", add_desc, tags, columns)
 SELECT
     table_name, table_schema, '', '', '{}'::text[],
-    jsonb_agg (row_to_json(cast(row (c.column_name, '', c.data_type, c.ispk) as column_data))) json_columns
+    jsonb_agg (row_to_json(cast(row (c.column_name, '', c.data_type, c.constraint_types) as column_data))) json_columns
 FROM (
     SELECT
-        distinct col.table_name,
+    distinct col.table_name,
+    col.table_schema,
+    col.column_name,
+        col.data_type, array_agg(cont.constraint_type) as constraint_types
+            FROM information_schema.columns col
+            LEFT JOIN information_schema.key_column_usage kcol 
+            ON kcol.table_name = col.table_name
+            AND kcol.table_schema = col.table_schema
+            AND col.column_name = kcol.column_name
+
+            LEFT JOIN information_schema.table_constraints cont
+            ON kcol.constraint_name = cont.constraint_name
+
+    WHERE col.table_schema in (${schemas})
+    group by col.table_name,
         col.table_schema,
         col.column_name,
-        col.data_type, (case when kcol.constraint_name != '' then true
-            						else false 
-												end) as ispk
-FROM information_schema.columns col
-    LEFT JOIN information_schema.key_column_usage kcol 
-	ON kcol.table_name = col.table_name
-    AND kcol.table_schema = col.table_schema
-    AND col.column_name = kcol.column_name
-WHERE  col.table_schema in (${schemas})) c
+        col.data_type) c
 WHERE  table_schema in (${schemas})
 GROUP BY table_name, table_schema
 
 ON CONFLICT ON CONSTRAINT tables_docs_pkey DO UPDATE SET columns= (SELECT json_agg(newColumns) FROM (
-    SELECT coalesce(new.name, old.name) AS name, coalesce(old.desc, new.desc) AS desc, coalesce(new.type, old.type) AS type, coalesce(new.ispk, old.ispk) AS ispk
-    FROM jsonb_to_recordset(dbdocs.tables_docs.columns) AS old(name text, "desc" text, type text, ispk boolean)
-    FULL JOIN jsonb_to_recordset(EXCLUDED.columns) AS new(name text, "desc" text, type text, ispk boolean)
+    SELECT coalesce(new.name, old.name) AS name, coalesce(old.desc, new.desc) AS desc, coalesce(new.type, old.type) AS type, coalesce(new.constraint_types, old.constraint_types) AS constraint_types
+    FROM jsonb_to_recordset(dbdocs.tables_docs.columns) AS old(name text, "desc" text, type text, constraint_types text[])
+    RIGHT JOIN jsonb_to_recordset(EXCLUDED.columns) AS new(name text, "desc" text, type text, constraint_types text[])
     ON old.name = new.name
 ) newColumns);`
 
 module.exports = {
     setupScript,
     parseTables,
-  }
+}
