@@ -7,7 +7,7 @@ const port = process.env.PORT
 
 const secret = process.env.SECRET
 
-const schemas = ['emet', 'tbcommon', 'public']
+const schemas = ['emet', 'tbcommon']
 const tags = ['Read', 'Write', 'TBManager']
 
 module.exports = {
