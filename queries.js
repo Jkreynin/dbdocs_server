@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS dbdocs.configuration
 TABLESPACE pg_default;
 
 ALTER TABLE dbdocs.configuration
-    OWNER to postgres;
+    OWNER to ${config.user};
 
 INSERT INTO dbdocs.configuration (property, property_data) VALUES
 ('credentials', '{"pass": "dontfish", "name": "maagar"}')
@@ -60,7 +60,7 @@ FROM (
     distinct col.table_name,
     col.table_schema,
     col.column_name,
-        col.data_type, array_agg(cont.constraint_type) as constraint_types
+        col.data_type, array_agg(distinct cont.constraint_type) as constraint_types
             FROM information_schema.columns col
             LEFT JOIN information_schema.key_column_usage kcol 
             ON kcol.table_name = col.table_name
