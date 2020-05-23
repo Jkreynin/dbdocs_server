@@ -1,11 +1,11 @@
 
-const host = "localhost"
-const user = "postgres"
-const database = "postgres"
-const password = "postgres"
-const port = 5432
+const host = process.env.HOST
+const user = process.env.USER
+const database = process.env.DB
+const password = process.env.PASS
+const port = process.env.PORT
 
-const secret = "dontfish"
+const secret = process.env.SECRET
 
 const schemas = [{ name: "tbcommon", default: true }, { name: "public", default: true }]
 
