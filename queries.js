@@ -57,11 +57,11 @@ SELECT
     table_name, table_schema, '', '', '{}'::text[],
     jsonb_agg (row_to_json(cast(row (c.column_name, '', c.data_type, c.constraint_types) as column_data))) json_columns
 FROM (
-    SELECT
-    distinct col.table_name,
+    SELECT distinct
+    col.table_name,
     col.table_schema,
     col.column_name,
-        col.data_type, array_agg(distinct cont.constraint_type) as constraint_types
+        col.data_type, array_agg(distinct cont.constraint_type) as constraint_types, col.ordinal_position
             FROM information_schema.columns col
             LEFT JOIN information_schema.key_column_usage kcol 
             ON kcol.table_name = col.table_name
@@ -75,7 +75,9 @@ FROM (
     group by col.table_name,
         col.table_schema,
         col.column_name,
-        col.data_type) c
+        col.data_type,
+        col.ordinal_position
+    ORDER BY col.table_name, col.ordinal_position) c
 WHERE  table_schema in (${schemas})
 GROUP BY table_name, table_schema
 
