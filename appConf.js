@@ -1,14 +1,13 @@
 
-const host = process.env.HOST
-const user = process.env.USER
-const database = process.env.DB
-const password = process.env.PASS
-const port = process.env.PORT
+const host = "localhost"
+const user = "postgres"
+const database = "postgres"
+const password = "postgres"
+const port = 5432
 
-const secret = process.env.SECRET
+const secret = "dontfish"
 
-const schemas = ['emet', 'tbcommon']
-const tags = ['Read', 'Write', 'TBManager']
+const schemas = [{ name: "tbcommon", default: true }, { name: "public", default: true }]
 
 module.exports = {
     host,
@@ -17,6 +16,5 @@ module.exports = {
     password,
     port,
     schemas,
-    tags,
     secret
 }

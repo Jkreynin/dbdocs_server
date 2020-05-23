@@ -40,9 +40,12 @@ app.post('/login', async (request, response) => {
 app.use("/api*", auth);
 app.get('/api/tables', dataAccess.getTables)
 app.get('/api/tables/:schema/:name', dataAccess.getTableByNameAndSchema)
+app.delete('/api/tables/:schema/:name', dataAccess.deleteTable)
 app.put('/api/table', dataAccess.updateTable)
 app.get('/api/refresh', dataAccess.refresh)
 app.get('/api/tags', dataAccess.getTags)
+app.put('/api/tags', dataAccess.saveTags)
+app.get('/api/schemas', dataAccess.getSchemas)
 
 dataAccess.setup()
     .then(() => {

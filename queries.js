@@ -1,5 +1,5 @@
 const config = require('./appConf')
-let schemas = config.schemas.map(item => `'${item}'`).toString();
+let schemas = config.schemas.map(item => `'${item.name}'`).toString();
 const setupScript = `
 CREATE SCHEMA IF NOT EXISTS dbdocs AUTHORIZATION ${config.user};
 
@@ -33,7 +33,8 @@ ALTER TABLE dbdocs.configuration
     OWNER to ${config.user};
 
 INSERT INTO dbdocs.configuration (property, property_data) VALUES
-('credentials', '{"pass": "dontfish", "name": "maagar"}')
+('credentials', '{"pass": "dontfish", "name": "maagar"}'),
+('tags', '[]')
 ON CONFLICT DO NOTHING;
     
 DO $$

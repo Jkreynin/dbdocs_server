@@ -15,15 +15,23 @@ const setup = () => {
   return pool.query(queries.setupScript + " " + queries.parseTables);
 }
 
-const refresh = (request, response) => {
-  pool.query(queries.parseTables, (error, results) => {
-    if (error) {
-      response.status(500).send('Error during refresh')
-      console.log(error);
-    } else {
-      response.status(200).send('Refreshed')
-    }
-  })
+const refresh = async (request, response) => {
+  let initNumbers = await columnsAndTablesCount();
+  try {
+    await pool.query(queries.parseTables);
+  } catch (error) {
+    response.status(500).send('Error during refresh')
+    console.log(error);
+  }
+  let updatedNumbers = await columnsAndTablesCount();
+
+  let result = {
+    tables: updatedNumbers.tables - initNumbers.tables,
+    columns: updatedNumbers.columns - initNumbers.columns
+  }
+
+  response.status(200).json(result)
+
 }
 
 const getTables = (request, response) => {
@@ -80,6 +88,19 @@ const updateTable = (request, response) => {
   )
 }
 
+const deleteTable = (request, response) => {
+  const table = request.params.name;
+  const schema = request.params.schema;
+
+  pool.query(`UPDATE dbdocs.tables_docs SET is_deleted='true'
+              WHERE name = $1 and schema = $2 `, [table, schema], (error, results) => {
+    if (error) {
+      response.status(500).send('Error during update')
+    }
+    response.status(200).send('The table was deleted')
+  })
+}
+
 const isUserValid = async (userData) => {
   let results = await pool.query(`SELECT property_data
               FROM dbdocs.configuration
@@ -89,9 +110,46 @@ const isUserValid = async (userData) => {
   return (credentials.name == userData.name && credentials.pass == userData.pass)
 }
 
-const getTags = (request, response) => {
-  response.status(200).json(config.tags)
+const columnsAndTablesCount = async () => {
+  let columnsCount = await pool.query(`select sum(jsonb_array_length(columns)) as colCount
+  from dbdocs.tables_docs;
+  `);
+
+  let tablesCount = await pool.query(`select count(*) tabCount
+  from dbdocs.tables_docs
+  where is_deleted = 'false';`)
+
+  return { columns: columnsCount.rows[0].colcount, tables: tablesCount.rows[0].tabcount };
 }
+
+const getTags = async (request, response) => {
+  let results = await pool.query(`SELECT property_data
+  FROM dbdocs.configuration
+  WHERE property = 'tags'`)
+
+  response.status(200).json(results.rows[0].property_data);
+}
+
+const saveTags = (request, response) => {
+  pool.query(
+    `UPDATE dbdocs.configuration
+     SET property_data=$1
+     WHERE property = 'tags'`,
+    [JSON.stringify(request.body)],
+    (error, results) => {
+      if (error) {
+        response.status(500).send('Error during update')
+      } else {
+        response.status(200).send('The tags were updated')
+      }
+    }
+  )
+}
+
+const getSchemas = (request, response) => {
+  response.status(200).json(config.schemas)
+}
+
 
 module.exports = {
   setup,
@@ -99,6 +157,9 @@ module.exports = {
   getTableByNameAndSchema,
   updateTable,
   getTags,
+  getSchemas,
   refresh,
-  isUserValid
+  isUserValid,
+  saveTags,
+  deleteTable
 }
