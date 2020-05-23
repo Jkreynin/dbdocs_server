@@ -86,7 +86,26 @@ ON CONFLICT ON CONSTRAINT tables_docs_pkey DO UPDATE SET columns= (SELECT json_a
     ON old.name = new.name
 ) newColumns);`
 
+const findRefTable = `
+SELECT rel_kcu.table_schema as schema, rel_kcu.table_name as table,
+       rel_kcu.column_name as column
+FROM information_schema.table_constraints tco
+JOIN information_schema.key_column_usage kcu
+          ON tco.constraint_schema = kcu.constraint_schema
+          and tco.constraint_name = kcu.constraint_name
+JOIN information_schema.referential_constraints rco
+          ON tco.constraint_schema = rco.constraint_schema
+          and tco.constraint_name = rco.constraint_name
+JOIN information_schema.key_column_usage rel_kcu
+          ON rco.unique_constraint_schema = rel_kcu.constraint_schema
+          and rco.unique_constraint_name = rel_kcu.constraint_name
+          and kcu.ordinal_position = rel_kcu.ordinal_position
+WHERE tco.constraint_type = 'FOREIGN KEY' and
+kcu.table_name=$1 and kcu.table_schema=$2 and kcu.column_name=$3
+LIMIT 1`
+
 module.exports = {
     setupScript,
     parseTables,
+    findRefTable
 }

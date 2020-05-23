@@ -150,6 +150,20 @@ const getSchemas = (request, response) => {
   response.status(200).json(config.schemas)
 }
 
+const getRefTable = async (request, response) => {
+  const table = request.params.name;
+  const schema = request.params.schema;
+  const column = request.params.column;
+
+  pool.query(queries.findRefTable, [table, schema, column], (error, results) => {
+    if (error) {
+      response.status(500).send('Could Not during update')
+    }
+    response.status(200).json(results.rows[0])
+  })
+}
+
+
 
 module.exports = {
   setup,
@@ -161,5 +175,6 @@ module.exports = {
   refresh,
   isUserValid,
   saveTags,
-  deleteTable
+  deleteTable,
+  getRefTable
 }
