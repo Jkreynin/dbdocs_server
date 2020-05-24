@@ -33,9 +33,9 @@ const refresh = async (request, response) => {
 }
 
 const getTables = (request, response) => {
-  pool.query(`SELECT name,schema,"desc",add_desc,tags,columns 
+  pool.query(`SELECT name,schema,"desc",add_desc,tags,columns, is_deleted
               FROM dbdocs.tables_docs 
-              WHERE is_deleted=false order by name`, (error, results) => {
+              ORDER BY name`, (error, results) => {
     if (error) {
       response.status(500).send('Error during query')
       console.log(error);
@@ -86,16 +86,17 @@ const updateTable = (request, response) => {
   )
 }
 
-const deleteTable = (request, response) => {
+const changeTableStatus = (request, response) => {
   const table = request.params.name;
   const schema = request.params.schema;
+  const statusType = request.body.type;
 
-  pool.query(`UPDATE dbdocs.tables_docs SET is_deleted='true'
-              WHERE name = $1 and schema = $2 `, [table, schema], (error, results) => {
+  pool.query(`UPDATE dbdocs.tables_docs SET is_deleted=$1
+              WHERE name = $2 and schema = $3 `, [statusType == 'deleted' ? true : false, table, schema], (error, results) => {
     if (error) {
-      response.status(500).send('Error during delete')
+      response.status(500).send('Error during status change')
     } else {
-      response.status(200).send('The table was deleted')
+      response.status(200).send('The table status was changed')
     }
   })
 }
@@ -182,6 +183,6 @@ module.exports = {
   refresh,
   isUserValid,
   saveTags,
-  deleteTable,
+  changeTableStatus,
   getRefTable
 }

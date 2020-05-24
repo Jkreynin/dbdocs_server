@@ -41,7 +41,7 @@ app.use("/api*", auth);
 app.get('/api/tables', dataAccess.getTables)
 app.get('/api/tables/:schema/:name', dataAccess.getTableByNameAndSchema)
 app.get('/api/columns/ref/:schema/:name/:column', dataAccess.getRefTable)
-app.delete('/api/tables/:schema/:name', dataAccess.deleteTable)
+app.patch('/api/table/status/:schema/:name/', dataAccess.changeTableStatus)
 app.put('/api/table', dataAccess.updateTable)
 app.get('/api/refresh', dataAccess.refresh)
 app.get('/api/tags', dataAccess.getTags)
